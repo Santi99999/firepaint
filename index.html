@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>firepaint</title>
+  <style>
+    #canvas {
+      border: 1px solid black;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="500" height="500"></canvas>
+  <button id="saveButton">Guardar dibujo</button>
+  <h2>Dibujos de otros usuarios:</h2>
+  <div id="drawingsList"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.3.3/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.3.3/firebase-firestore.js"></script>
+
+  <script>
+    // Configuración de Firebase
+    var firebaseConfig = {
+      apiKey: "AIzaSyChktp7o2gn4P15x5mhHt3DVK8Vta0nuH4",
+      authDomain: "firepaint-448d1.firebaseapp.com",
+      projectId: "firepaint-448d1",
+    };
+
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.firestore();
+
+    // Obtener referencia al canvas y al contexto de dibujo
+    var canvas = document.getElementById('canvas');
+    var ctx = canvas.getContext('2d');
+
+    // Variables para rastrear el estado del dibujo
+    var isDrawing = false;
+    var lastX = 0;
+    var lastY = 0;
+
+    // Función para dibujar en el canvas
+    function draw(e) {
+      if (!isDrawing) return;
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'black';
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(e.offsetX, e.offsetY);
+      ctx.stroke();
+      [lastX, lastY] = [e.offsetX, e.offsetY];
+    }
+
+    // Manejador de eventos para comenzar a dibujar
+    canvas.addEventListener('mousedown', (e) => {
+      isDrawing = true;
+      [lastX, lastY] = [e.offsetX, e.offsetY];
+    });
+
+    // Manejadores de eventos para dibujar y detener el dibujo
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', () => isDrawing = false);
+    canvas.addEventListener('mouseout', () => isDrawing = false);
+
+    // Función para guardar el dibujo en Firebase
+    function saveDrawing() {
+      var drawingData = canvas.toDataURL(); // Obtener los datos del dibujo en formato base64
+      db.collection("dibujos").add({
+        image: drawingData
+      });
+    }
+
+    // Función para cargar y renderizar los dibujos desde Firebase
+    function loadDrawings() {
+      var drawingsList = document.getElementById('drawingsList');
+      db.collection("dibujos").get().then((querySnapshot) => {
+        querySnapshot.forEach((doc) => {
+          var img = new Image();
+          img.src = doc.data().image;
+          drawingsList.appendChild(img);
+        });
+      });
+    }
+
+    // Manejador de eventos para guardar el dibujo al hacer clic en el botón
+    var saveButton = document.getElementById('saveButton');
+    saveButton.addEventListener('click', saveDrawing);
+
+    // Cargar los dibujos al cargar la página
+    loadDrawings();
+  </script>
+</body>
+</html>
